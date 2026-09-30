@@ -227,3 +227,122 @@ plt.show()
 print("\n CONCLUSION ")
 print("Different covariances - Quadratic (curved) boundary")
 print("Same covariance       - Linear (straight) boundary")
+
+
+
+# Experiment 3: Different Circular Covariances
+print("\n Experiment 3: Different Circular Covariances ")
+
+mu1 = np.array([-2.0, 0.0])
+mu2 = np.array([2.5, 1.0])
+
+# Different variances, but both are isotropic
+cov1 = np.array([[1.0, 0.0],
+                 [0.0, 1.0]])
+
+cov2 = np.array([[2.0, 0.0],
+                 [0.0, 2.0]])
+
+Y1 = generate_with_cov(mu1, cov1)
+Y2 = generate_with_cov(mu2, cov2)
+
+m1, c1 = estimate_params(Y1)
+m2, c2 = estimate_params(Y2)
+
+print("Class 1 mean:", m1)
+print("Class 2 mean:", m2)
+print("Class 1 covariance:\n", c1)
+print("Class 2 covariance:\n", c2)
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.scatter(Y1[:,0], Y1[:,1], s=10, alpha=0.4,
+           c='royalblue', label='Class ω1')
+
+ax.scatter(Y2[:,0], Y2[:,1], s=10, alpha=0.4,
+           c='crimson', label='Class ω2')
+
+plot_constant_density(ax, m1, c1, 'blue')
+plot_constant_density(ax, m2, c2, 'red')
+
+x = np.linspace(-8, 8, 400)
+y = np.linspace(-7, 7, 400)
+
+X, Y = np.meshgrid(x, y)
+pos = np.dstack((X, Y))
+
+pdf1 = multivariate_normal(m1, c1).pdf(pos)
+pdf2 = multivariate_normal(m2, c2).pdf(pos)
+
+ax.contour(X, Y, pdf1 - pdf2, levels=[0],
+           colors='black', linewidths=2.5,
+           linestyles='--')
+
+ax.set_title("Part 4 - Experiment 3: Different Circular Covariances\n"
+             "(Quadratic Decision Boundary)")
+
+ax.set_xlabel("x1")
+ax.set_ylabel("x2")
+ax.axis('equal')
+ax.grid(True, alpha=0.3)
+ax.legend()
+
+plt.tight_layout()
+plt.show()
+
+
+# Experiment 4: Same Circular Covariance
+print("\n Experiment 4: Same Circular Covariance ")
+
+mu1 = np.array([-2.0, 0.0])
+mu2 = np.array([2.5, 1.0])
+
+# Same isotropic covariance for both classes
+same_cov = np.array([[1.0, 0.0],
+                     [0.0, 1.0]])
+
+Y1 = generate_with_cov(mu1, same_cov)
+Y2 = generate_with_cov(mu2, same_cov)
+
+m1, c1 = estimate_params(Y1)
+m2, c2 = estimate_params(Y2)
+
+print("Both classes use the same circular covariance")
+print("Class 1 mean:", m1)
+print("Class 2 mean:", m2)
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.scatter(Y1[:,0], Y1[:,1], s=10, alpha=0.4,
+           c='royalblue', label='Class ω1')
+
+ax.scatter(Y2[:,0], Y2[:,1], s=10, alpha=0.4,
+           c='crimson', label='Class ω2')
+
+plot_constant_density(ax, m1, c1, 'blue')
+plot_constant_density(ax, m2, c2, 'red')
+
+x = np.linspace(-7, 8, 400)
+y = np.linspace(-6, 7, 400)
+
+X, Y = np.meshgrid(x, y)
+pos = np.dstack((X, Y))
+
+pdf1 = multivariate_normal(m1, c1).pdf(pos)
+pdf2 = multivariate_normal(m2, c2).pdf(pos)
+
+ax.contour(X, Y, pdf1 - pdf2, levels=[0],
+           colors='black', linewidths=2.5,
+           linestyles='--')
+
+ax.set_title("Part 4 - Experiment 4: Same Circular Covariance\n"
+             "(Linear Decision Boundary)")
+
+ax.set_xlabel("x1")
+ax.set_ylabel("x2")
+ax.axis('equal')
+ax.grid(True, alpha=0.3)
+ax.legend()
+
+plt.tight_layout()
+plt.show()
