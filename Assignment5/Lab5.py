@@ -28,12 +28,7 @@ def make_gaussian_samples(mean, covariance, count):
 
     # Eigen-decomposition of covariance
     eigenvalues, eigenvectors = np.linalg.eigh(covariance)
-
-    transform = (
-        eigenvectors
-        @ np.diag(np.sqrt(eigenvalues))
-        @ eigenvectors.T
-    )
+    transform = (eigenvectors @ np.diag(np.sqrt(eigenvalues)) @ eigenvectors.T)
     return z @ transform.T + mean
 
 # Data Generation
@@ -41,18 +36,9 @@ def create_dataset(covariance_list):
     data = []
     labels = []
     for class_id in range(3):
-        points = make_gaussian_samples(
-            MU[class_id],
-            covariance_list[class_id],
-            n
-        )
+        points = make_gaussian_samples(MU[class_id], covariance_list[class_id], n)
         data.append(points)
-        labels.append(
-            np.full(
-                n,
-                class_id
-            )
-        )
+        labels.append(np.full(n, class_id))
     return np.vstack(data), np.concatenate(labels)
 
 # 80% Training and 20% Testing
@@ -72,7 +58,6 @@ def train_test_split_manual(X, y):
         test_x.append(class_data[cut:])
 
         train_y.append(np.full(cut, class_id))
-
         test_y.append(np.full(len(class_data) - cut, class_id))
 
     return (
@@ -98,10 +83,7 @@ def estimate_class_parameters(X, y):
     for class_id in range(3):
         class_points = X[y == class_id]
         mean = mle_mean(class_points)
-        covariance = mle_covariance(
-            class_points,
-            mean
-        )
+        covariance = mle_covariance(class_points, mean)
         class_means.append(mean)
         class_covariances.append(covariance)
     return class_means, class_covariances
@@ -116,12 +98,7 @@ def force_diagonal(covariance):
 
 # Creating Required Model
 def build_model(X_train, y_train,covariance_case):
-    means, individual_covariances = (
-        estimate_class_parameters(
-            X_train,
-            y_train
-        )
-    )
+    means, individual_covariances = (estimate_class_parameters(X_train, y_train))
 
     # Shared covariance
     if covariance_case == "shared_isotropic":
@@ -152,23 +129,15 @@ def build_model(X_train, y_train,covariance_case):
         total = np.zeros((2, 2))
         number_of_points = 0
         for class_id in range(3):
-            class_points = X_train[
-                y_train == class_id
-            ]
+            class_points = X_train[y_train == class_id]
 
-            centered = (
-                class_points
-                - means[class_id]
-            )
+            centered = (class_points - means[class_id])
 
             total += centered.T @ centered
             number_of_points += len(class_points)
-        common_covariance = (
-            total / number_of_points
-        )
-        common_covariance = force_diagonal(
-            common_covariance
-        )
+            
+        common_covariance = (total / number_of_points)
+        common_covariance = force_diagonal(common_covariance)
         covariances = [
             common_covariance.copy()
             for _ in range(3)
@@ -186,18 +155,11 @@ def build_model(X_train, y_train,covariance_case):
         total = np.zeros((2, 2))
         number_of_points = 0
         for class_id in range(3):
-            class_points = X_train[
-                y_train == class_id
-            ]
-            centered = (
-                class_points
-                - means[class_id]
-            )
-            total += centered.T @ centered
+            class_points = X_train[y_train == class_id]
+            centered = (class_points - means[class_id])
+            total += centered.T @ centered          
             number_of_points += len(class_points)
-        common_covariance = (
-            total / number_of_points
-        )
+        common_covariance = (total / number_of_points)
         covariances = [
             common_covariance.copy()
             for _ in range(3)
@@ -208,37 +170,22 @@ def build_model(X_train, y_train,covariance_case):
         covariances = individual_covariances
 
     else:
-        raise ValueError(
-            "Invalid covariance case"
-        )
+        raise ValueError("Invalid covariance case")
     return means, covariances
 
 # Log Gaussian Likelihood
 def log_probability(X, mean, covariance):
-    covariance = (
-        covariance
-        + 1e-10 * np.eye(2)
-    )
+    covariance = (covariance + 1e-10 * np.eye(2))
     difference = X - mean
     inverse = np.linalg.inv(covariance)
     determinant = np.linalg.det(covariance)
-    mahalanobis = np.sum(
-        (difference @ inverse) * difference,
-        axis=1
-    )
-    return -0.5 * (
-        2 * np.log(2 * np.pi)
-        + np.log(determinant)
-        + mahalanobis
-    )
+    mahalanobis = np.sum((difference @ inverse) * difference, axis=1)
+    return -0.5 * (2 * np.log(2 * np.pi) + np.log(determinant) + mahalanobis)
 
 # Classification
 def predict(X, means, covariances):
     scores = []
-    for mean, covariance in zip(
-        means,
-        covariances
-    ):
+    for mean, covariance in zip(means, covariances):
         scores.append(
             log_probability(
                 X,
@@ -285,34 +232,14 @@ def draw_boundary(
     x2_min = X_test[:, 1].min() - margin
     x2_max = X_test[:, 1].max() + margin
 
-    x1 = np.linspace(
-        x1_min,
-        x1_max,
-        350
-    )
-
-    x2 = np.linspace(
-        x2_min,
-        x2_max,
-        350
-    )
+    x1 = np.linspace(x1_min, x1_max, 350)
+    x2 = np.linspace(x2_min, x2_max, 350)
 
     xx, yy = np.meshgrid(x1, x2)
+    grid = np.column_stack([xx.ravel(), yy.ravel()])
 
-    grid = np.column_stack([
-        xx.ravel(),
-        yy.ravel()
-    ])
-
-    prediction = predict(
-        grid,
-        means,
-        covariances
-    )
-
-    prediction = prediction.reshape(
-        xx.shape
-    )
+    prediction = predict(grid, means, covariances)
+    prediction = prediction.reshape(xx.shape)
 
     plt.figure(figsize=(9, 7))
 
@@ -326,12 +253,9 @@ def draw_boundary(
     )
 
     symbols = ["o", "s", "^"]
-
     for class_id in range(3):
 
-        points = X_test[
-            y_test == class_id
-        ]
+        points = X_test[y_test == class_id]
 
         plt.scatter(
             points[:, 0],
@@ -554,37 +478,31 @@ COV_DIFFERENT_FULL = [
 # Running all cases
 
 results = {}
-
 results["Shared Isotropic"] = execute_experiment(
     "Case 1 - Shared Isotropic Covariance",
     COV_SHARED_ISO,
     "shared_isotropic"
 )
-
 results["Different Isotropic"] = execute_experiment(
     "Case 2 - Different Isotropic Covariance",
     COV_DIFFERENT_ISO,
     "different_isotropic"
 )
-
 results["Shared Diagonal"] = execute_experiment(
     "Case 3 - Shared Diagonal Covariance",
     COV_SHARED_DIAGONAL,
     "shared_diagonal"
 )
-
 results["Different Diagonal"] = execute_experiment(
     "Case 4 - Different Diagonal Covariance",
     COV_DIFFERENT_DIAGONAL,
     "different_diagonal"
 )
-
 results["Shared Full"] = execute_experiment(
     "Case 5 - Shared Full Covariance",
     COV_SHARED_FULL,
     "shared_full"
 )
-
 results["Different Full"] = execute_experiment(
     "Case 6 - Different Full Covariance",
     COV_DIFFERENT_FULL,
@@ -592,6 +510,7 @@ results["Different Full"] = execute_experiment(
 )
 
 # Summary
+
 print("\n")
 print("=" * 75)
 print("FINAL ACCURACY SUMMARY")
@@ -601,3 +520,262 @@ for case, accuracy in results.items():
         f"{case:<30} : "
         f"{accuracy * 100:.2f}%"
     )
+
+# PART - 2
+# 2D Dataset
+np.random.seed(12)
+
+file_name = "trian.txt"
+
+data = np.loadtxt(
+    file_name,
+    delimiter=","
+)
+
+X = data[:, 0:2]       # x and y coordinates
+y = data[:, 2].astype(int)   # class labels
+
+print("Dataset shape:", data.shape)
+print("Number of samples:", len(X))
+print("Classes:", np.unique(y))
+
+# Display class counts
+classes = np.unique(y)
+
+print("\nSamples in each class:")
+for c in classes:
+    print(
+        f"Class {c}:",
+        np.sum(y == c)
+    )
+
+# 80% Training and 20% Testing
+
+train_X = []
+train_y = []
+
+test_X = []
+test_y = []
+
+for c in classes:
+    class_points = X[y == c]
+    # Randomly shuffle the points
+    indices = np.random.permutation(len(class_points))
+    class_points = class_points[indices]
+    split = int(0.80 * len(class_points))
+
+    train_X.append(class_points[:split])
+    test_X.append(class_points[split:])
+
+    train_y.append(np.full(split, c))
+    test_y.append(np.full(len(class_points) - split, c))
+
+X_train = np.vstack(train_X)
+y_train = np.concatenate(train_y)
+
+X_test = np.vstack(test_X)
+y_test = np.concatenate(test_y)
+
+print("\nTraining samples:", len(X_train))
+print("Testing samples :", len(X_test))
+
+# Maximum Likelihood Estimate Mean
+def calculate_mle_mean(points):
+    return np.mean(points, axis=0)
+
+# Maximum Likelihood Estimate Covariance
+def calculate_mle_covariance(points, mean):
+    centered = points - mean
+    return (centered.T @ centered) / len(points)
+
+# Estimate parameter for class
+means = {}
+covariances = {}
+
+print("\n")
+print("=" * 65)
+print("MLE PARAMETER ESTIMATION")
+print("=" * 65)
+
+for c in classes:
+    class_training_data = X_train[y_train == c]
+    mean = calculate_mle_mean(class_training_data)
+
+    covariance = calculate_mle_covariance(class_training_data, mean)
+
+    means[c] = mean
+    covariances[c] = covariance
+
+    print(f"\nClass {c}")
+    print("MLE Mean:")
+    print(np.round(mean, 4))
+    print("MLE Covariance:")
+    print(np.round(covariance, 4))
+
+# Gaussian log likelihood
+
+def gaussian_log_probability(points, mean, covariance):
+
+    # Small value added for numerical stability
+    covariance = (covariance + 1e-10 * np.eye(2))
+
+    difference = points - mean
+    inverse_covariance = np.linalg.inv(covariance)
+    determinant = np.linalg.det(covariance)
+
+    mahalanobis_distance = np.sum((difference @ inverse_covariance) * difference, axis=1)
+
+    return -0.5 * (
+        2 * np.log(2 * np.pi)
+        + np.log(determinant)
+        + mahalanobis_distance
+    )
+
+# Classification
+
+def classify(points):
+    probability_values = []
+    for c in classes:
+        score = gaussian_log_probability(points, means[c], covariances[c])
+        probability_values.append(score)
+
+    probability_values = np.array(probability_values)
+    best_class_index = np.argmax(probability_values, axis=0)
+    return classes[best_class_index]
+
+# Classify test data
+
+predicted_labels = classify(X_test)
+
+# Confusion Matrix
+
+confusion = np.zeros((len(classes), len(classes)), dtype=int)
+
+class_to_index = {
+    c: i
+    for i, c in enumerate(classes)
+}
+
+for actual, predicted in zip(
+    y_test,
+    predicted_labels
+):
+
+    row = class_to_index[actual]
+    column = class_to_index[predicted]
+
+    confusion[
+        row,
+        column
+    ] += 1
+
+
+print("\n")
+print("=" * 65)
+print("CONFUSION MATRIX")
+print("=" * 65)
+print(confusion)
+
+# Accuracy
+
+accuracy = (np.trace(confusion) / np.sum(confusion))
+
+print("\nAccuracy:", f"{accuracy * 100:.2f}%")
+
+# Decision boundary
+
+x_min = X[:, 0].min() - 100
+x_max = X[:, 0].max() + 100
+
+y_min = X[:, 1].min() - 100
+y_max = X[:, 1].max() + 100
+
+grid_x = np.linspace(x_min, x_max, 400)
+grid_y = np.linspace(y_min, y_max, 400)
+
+xx, yy = np.meshgrid(grid_x, grid_y)
+grid_points = np.column_stack([xx.ravel(), yy.ravel()])
+
+grid_prediction = classify(grid_points)
+grid_prediction = grid_prediction.reshape(xx.shape)
+
+# Plotting
+
+plt.figure(figsize=(10, 8))
+
+plt.contourf(xx, yy,
+    grid_prediction,
+    levels=np.arange(
+        classes.min() - 0.5,
+        classes.max() + 1.5,
+        1
+    ),
+    alpha=0.20,
+    cmap="viridis"
+)
+
+markers = ["o", "s", "^", "D", "P"]
+
+for i, c in enumerate(classes):
+    test_points = X_test[
+        y_test == c
+    ]
+
+    plt.scatter(
+        test_points[:, 0],
+        test_points[:, 1],
+        marker=markers[
+            i % len(markers)
+        ],
+        s=18,
+        alpha=0.55,
+        label=f"Class {c}"
+    )
+
+
+# Plot MLE means
+
+for c in classes:
+    mean = means[c]
+    plt.scatter(
+        mean[0],
+        mean[1],
+        marker="X",
+        s=180,
+        edgecolors="black",
+        linewidths=2
+    )
+
+    plt.annotate(
+        f"μ{c}",
+        mean,
+        xytext=(8, 8),
+        textcoords="offset points",
+        fontsize=11
+    )
+
+
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.title("Gaussian Classification - Part 2")
+
+plt.legend()
+plt.grid(alpha=0.25)
+
+plt.tight_layout()
+plt.show()
+
+
+# Result
+print("\n")
+print("=" * 65)
+print("FINAL RESULT")
+print("=" * 65)
+
+print("Training samples :", len(X_train))
+print("Testing samples  :", len(X_test))
+
+print("Correct predictions:", np.trace(confusion))
+print("Incorrect predictions:", len(X_test) - np.trace(confusion))
+
+print("Final Accuracy:", f"{accuracy * 100:.2f}%")
